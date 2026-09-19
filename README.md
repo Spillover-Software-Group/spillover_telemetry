@@ -10,7 +10,7 @@ writes no configuration at all.
 
 ```ruby
 # Gemfile
-gem "spillover_telemetry", github: "Spillover-Software-Group/spillover_telemetry", tag: "v0.1.0"
+gem "spillover_telemetry", github: "Spillover-Software-Group/spillover_telemetry", tag: "v0.1.1"
 ```
 
 Pinned to a tag, never floating. The repository is public, so the image build's `bundle install`
@@ -46,7 +46,7 @@ no SDK and no network call. Every metric carries the dimensions `App`, `Environm
 
 | Collector | Reports | Unit | Where it comes from |
 |---|---|---|---|
-| `puma` | `PumaBacklog` | Count | requests waiting for a thread |
+| `puma` | `PumaBacklog` | Count | requests waiting for a thread; in a clustered Puma, summed over the workers |
 | | `PumaPoolCapacity` | Count | threads that could still take one |
 | | `PumaRunningThreads` | Count | threads running |
 | `solid_queue` | `QueueDepth` | Count | jobs waiting to run |

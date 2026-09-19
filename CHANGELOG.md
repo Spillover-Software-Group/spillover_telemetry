@@ -2,6 +2,14 @@
 
 Versions are semver tags. An application pins one.
 
+## v0.1.1
+
+- The `puma` collector reports a clustered Puma. The sampling process in a cluster is the master,
+  whose stats carry one status per worker rather than a pool of its own, so the collector now sums
+  the workers' backlog, capacity and running threads; a worker that has not booted counts for
+  nothing. Single mode is unchanged. Before this, a `web` role with `WEB_CONCURRENCY` above 1
+  published documents with no Puma metrics at all, and its backlog alarm had no data.
+
 ## v0.1.0
 
 The three files every Spillover Rails application carried a copy of, as one gem: runtime metrics on
