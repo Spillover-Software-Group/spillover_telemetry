@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Lint, read-only. `bundle exec rubocop -a` is the writing variant and never verifies anything.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+exec bundle exec rubocop "$@"

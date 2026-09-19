@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# The whole suite, or the files named as arguments.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+if [ "$#" -eq 0 ]; then
+  while IFS= read -r file; do set -- "$@" "$file"; done < <(find test -name '*_test.rb' | sort)
+fi
+
+exec bundle exec ruby -Ilib -Itest \
+  -e 'files = ARGV.dup; ARGV.clear; files.each { |file| require File.expand_path(file) }' "$@"

@@ -1,0 +1,7 @@
+# The ruleset the five Spillover Rails services lint with, so a file reads the same here as it does
+# where it is used.
+inherit_gem:
+  rubocop-rails-omakase: rubocop.yml
+
+AllCops:
+  TargetRubyVersion: 3.3
