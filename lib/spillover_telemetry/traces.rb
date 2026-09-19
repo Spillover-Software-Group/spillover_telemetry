@@ -25,6 +25,13 @@ module SpilloverTelemetry
       require "opentelemetry/sdk"
       require "opentelemetry/exporter/otlp"
       require "opentelemetry/instrumentation/rails"
+      # The outbound half of a trace: the calls an application makes to another service. Neither
+      # instrumentation loads its client, and neither installs where the process has not: one asks
+      # whether the constant is defined and, for HTTPX, whether the version is one it patches. A
+      # process with an older client or none is told so in a line of its own and goes on tracing
+      # everything else.
+      require "opentelemetry/instrumentation/faraday"
+      require "opentelemetry/instrumentation/httpx"
 
       ::OpenTelemetry::SDK.configure do |config|
         config.use_all(INSTRUMENTATION.merge(instrumentation))

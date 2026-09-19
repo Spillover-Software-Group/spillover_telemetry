@@ -31,8 +31,11 @@ Gem::Specification.new do |spec|
 
   # Carried so that an application's Gemfile names this gem and nothing else, and loaded only by
   # SpilloverTelemetry::Traces, which runs only where an OTLP endpoint is set: Bundler requires what
-  # a Gemfile names, never a gem's own dependencies.
+  # a Gemfile names, never a gem's own dependencies. The two HTTP client instrumentations carry no
+  # dependency on their client, and each installs only where the process has loaded one.
   spec.add_dependency "opentelemetry-exporter-otlp", ">= 0.36"
+  spec.add_dependency "opentelemetry-instrumentation-faraday", ">= 0.33"
+  spec.add_dependency "opentelemetry-instrumentation-httpx", ">= 0.8"
   spec.add_dependency "opentelemetry-instrumentation-rails", ">= 0.42"
   spec.add_dependency "opentelemetry-sdk", ">= 1.13"
 end

@@ -15,6 +15,12 @@ group :development, :test do
   # are on json 2. This is the stack the suite proves the gem on.
   gem "json", "~> 2.7"
 
+  # The two outbound HTTP clients the applications use, at the versions accounts-api pins, which are
+  # the versions the instrumentations patch. The suite calls a real server with them rather than
+  # asserting that a patch was applied.
+  gem "faraday"
+  gem "httpx", ">= 1.6"
+
   gem "minitest"
   gem "puma"
   gem "rackup"
