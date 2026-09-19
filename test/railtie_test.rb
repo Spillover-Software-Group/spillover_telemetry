@@ -39,6 +39,12 @@ class RailtieTest < ActiveSupport::TestCase
     assert_equal "5f2d1c9", boot(SENTRY_DSN: DSN, KAMAL_VERSION: "5f2d1c9").dig(:sentry, :release)
   end
 
+  # The logs go to CloudWatch. A second copy of the SQL and the controller timings at Sentry is
+  # traffic and cost nobody asked for.
+  test "sends no logs to Sentry" do
+    assert_not boot(SENTRY_DSN: DSN).dig(:sentry, :structured_logging)
+  end
+
   test "lets the application add to the Sentry configuration" do
     assert_equal 7, boot(SENTRY_DSN: DSN, DUMMY_SENTRY_BREADCRUMBS: "7").dig(:sentry, :max_breadcrumbs)
   end

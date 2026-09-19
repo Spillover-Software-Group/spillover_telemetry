@@ -38,9 +38,13 @@ production monitoring, not a refactor.
 
 - Nothing is sent without `SENTRY_DSN`. `Sentry.init` never runs, the SDK stays uninitialized, and
   the middleware sentry-rails inserts passes every request through untouched.
-- `Sentry.init` sets the DSN, the environment and the release, and nothing else, so
-  `send_default_pii` stays off. Anything more belongs in an application's own
+- `Sentry.init` sets the DSN, the environment and the release, and nothing else it does not have to,
+  so `send_default_pii` stays off. Anything more belongs in an application's own
   `config.spillover_telemetry.sentry`, never in a second `Sentry.init`.
+- **sentry-rails' structured logging is off.** Left alone it forwards every Active Record and Action
+  Controller log line to Sentry. The logs already go to CloudWatch, Sentry is where errors go, and a
+  second copy of the SQL and the controller timings is traffic and cost nobody asked for. It is set
+  before the application's own block, so an application that wants it can turn it back on.
 
 **Traces**
 

@@ -59,9 +59,13 @@ runtime is not in this process reports nothing at all.
 
 ### Errors
 
-`Sentry.init` with the DSN, the environment and the release, and nothing else, so `send_default_pii`
-stays off. Where `httpx` is loaded, Sentry's own adapter for it is required, and an outbound call
-becomes a breadcrumb on whatever error follows it.
+`Sentry.init` with the DSN, the environment and the release, so `send_default_pii` stays off. Where
+`httpx` is loaded, Sentry's own adapter for it is required, and an outbound call becomes a breadcrumb
+on whatever error follows it.
+
+sentry-rails' structured logging is turned off. Its default forwards every Active Record and Action
+Controller log line to Sentry, and those logs already go to CloudWatch. An application that wants it
+turns it back on in its own `sentry` block.
 
 ### Traces
 

@@ -19,7 +19,12 @@ module SpilloverTelemetry
         # destination is what tells them apart. Kamal names the running version after the commit.
         config.environment = environment
         config.release = release
-        # Everything an application wants beyond those three, so that it never writes a second
+        # sentry-rails forwards every Active Record and Action Controller log line to Sentry unless
+        # it is told not to. Sentry is where errors go, the logs already go to CloudWatch, and a copy
+        # of the SQL and the controller timings is traffic and cost nobody asked for. Set before the
+        # block, so an application that wants it can have it.
+        config.rails.structured_logging.enabled = false
+        # Everything an application wants beyond those, so that it never writes a second
         # `Sentry.init` and loses them.
         customize&.call(config)
       end

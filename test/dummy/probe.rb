@@ -31,7 +31,8 @@ def sentry_report
     initialized: true,
     environment: Sentry.configuration.environment,
     release: Sentry.configuration.release,
-    max_breadcrumbs: Sentry.configuration.max_breadcrumbs
+    max_breadcrumbs: Sentry.configuration.max_breadcrumbs,
+    structured_logging: Sentry.configuration.rails.structured_logging.enabled?
   }
 end
 

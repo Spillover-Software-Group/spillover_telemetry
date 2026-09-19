@@ -12,6 +12,11 @@ sets.
   what the process is, or named by `CLOUDWATCH_METRICS_COLLECT`.
 - `SpilloverTelemetry::Errors`, and `config.spillover_telemetry.sentry` for what an application wants
   beyond the DSN, the environment and the release.
+
+  One deliberate change from the initializers this replaces: **sentry-rails' structured logging is
+  off**. Its default forwards every Active Record and Action Controller log line to Sentry, which
+  both applications have been doing since sentry-rails 7.0. An application that wants it turns it
+  back on in its own `sentry` block.
 - `SpilloverTelemetry::Traces`, and `config.spillover_telemetry.instrumentation` for what an
   application wants beyond the Rails bundle without Active Record and with `/health` untraced. The
   service name comes from `OTEL_SERVICE_NAME` rather than from code.
