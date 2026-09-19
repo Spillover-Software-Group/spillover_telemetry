@@ -9,6 +9,11 @@
 
 require "json"
 
+# The outbound HTTP client this process has loaded, where it has one. An application loads it from
+# its Gemfile, which is a thing its whole process either did or did not do, so here it is a variable
+# read before boot rather than a require inside a test.
+require ENV["DUMMY_HTTP_CLIENT"] if ENV["DUMMY_HTTP_CLIENT"]
+
 case ARGV.first
 when "server"
   # What `rails server` loads, and the only thing that defines Rails::Server.
@@ -47,8 +52,32 @@ def traces_report
     service_name: OpenTelemetry.tracer_provider.resource.attribute_enumerator.to_h["service.name"],
     rack_installed: registry.lookup("OpenTelemetry::Instrumentation::Rack").installed?,
     untraced_endpoints: registry.lookup("OpenTelemetry::Instrumentation::Rack").config[:untraced_endpoints],
-    active_record_installed: registry.lookup("OpenTelemetry::Instrumentation::ActiveRecord").installed?
+    active_record_installed: registry.lookup("OpenTelemetry::Instrumentation::ActiveRecord").installed?,
+    faraday_installed: registry.lookup("OpenTelemetry::Instrumentation::Faraday").installed?,
+    httpx_installed: registry.lookup("OpenTelemetry::Instrumentation::HTTPX").installed?
   }
+end
+
+# One real request to the server DUMMY_HTTP_REQUEST names, made with the client this process loaded,
+# and the spans it left. The exporter is in memory and the probe's OTEL_TRACES_EXPORTER is none, so
+# nothing goes out on the wire and there is nothing left to flush.
+def client_spans
+  url = ENV["DUMMY_HTTP_REQUEST"]
+  return [] unless url
+
+  exporter = OpenTelemetry::SDK::Trace::Export::InMemorySpanExporter.new
+  OpenTelemetry.tracer_provider.add_span_processor(
+    OpenTelemetry::SDK::Trace::Export::SimpleSpanProcessor.new(exporter)
+  )
+
+  case ENV.fetch("DUMMY_HTTP_CLIENT")
+  when "faraday" then ::Faraday.get(url)
+  when "httpx" then ::HTTPX.get(url)
+  end
+
+  exporter.finished_spans.map do |span|
+    { name: span.name, kind: span.kind.to_s, attributes: span.attributes }
+  end
 end
 
 def metrics_report
@@ -60,7 +89,8 @@ def metrics_report
 end
 
 File.write(ENV.fetch("DUMMY_REPORT"),
-           JSON.generate(sentry: sentry_report, traces: traces_report, metrics: metrics_report))
+           JSON.generate(sentry: sentry_report, traces: traces_report, metrics: metrics_report,
+                         client_spans: client_spans))
 
 # The report is written, and what a probe boots is more than it needs to shut down: Sentry's own
 # `at_exit` flushes to a DSN that points at nothing here and raises when it cannot. A boot that
