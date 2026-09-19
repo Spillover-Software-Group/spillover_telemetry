@@ -52,6 +52,18 @@ class SettingsTest < ActiveSupport::TestCase
     assert_equal "5f2d1c9", settings("KAMAL_VERSION" => "5f2d1c9").release
   end
 
+  test "reports as the destination Kamal deployed to" do
+    assert_equal "staging", settings("KAMAL_DESTINATION" => "staging").environment("production")
+  end
+
+  test "reports as the Rails environment where there is no destination" do
+    assert_equal "production", settings({}).environment("production")
+  end
+
+  test "lets a signal name its own environment over the destination" do
+    assert_equal "canary", settings("KAMAL_DESTINATION" => "staging").environment("canary", "production")
+  end
+
   # A `deploy.yml` that names a variable it has nothing to put in still passes an empty one.
   test "reads a variable that is set to nothing as one that is not set" do
     assert_not_predicate settings("SENTRY_DSN" => ""), :errors?

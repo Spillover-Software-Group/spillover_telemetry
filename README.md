@@ -10,7 +10,7 @@ writes no configuration at all.
 
 ```ruby
 # Gemfile
-gem "spillover_telemetry", github: "Spillover-Software-Group/spillover_telemetry", tag: "v0.1.2"
+gem "spillover_telemetry", github: "Spillover-Software-Group/spillover_telemetry", tag: "v0.1.3"
 ```
 
 Pinned to a tag, never floating. The repository is public, so the image build's `bundle install`
@@ -97,7 +97,8 @@ forgets it reports as `unknown_service`.
 | `CLOUDWATCH_METRICS_ROLE` | The `Role` dimension. Required where the namespace is set |
 | `CLOUDWATCH_METRICS_COLLECT` | The collectors to report from, comma separated, where the default is wrong |
 | `SENTRY_DSN` | The switch for errors, and where they go |
-| `SENTRY_ENVIRONMENT` | The environment errors are reported as. Defaults to `Rails.env` |
+| `SENTRY_ENVIRONMENT` | The environment errors are reported as, where it is not the destination |
+| `KAMAL_DESTINATION` | The environment metrics and errors are reported as. Kamal sets it to the destination; a process outside a container reports as `Rails.env` |
 | `KAMAL_VERSION` | The release errors are reported against. Kamal sets it to the commit |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | The switch for traces, and where they go |
 | `OTEL_SERVICE_NAME` | The service traces are attributed to |

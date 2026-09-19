@@ -22,7 +22,7 @@ module SpilloverTelemetry
 
       if settings.errors?
         Errors.install(dsn: settings.sentry_dsn,
-                       environment: settings.sentry_environment || ::Rails.env,
+                       environment: settings.environment(settings.sentry_environment, ::Rails.env),
                        release: settings.release,
                        customize: options.sentry)
       end
@@ -39,7 +39,7 @@ module SpilloverTelemetry
       if settings.metrics? && collect.any?
         SpilloverTelemetry.metrics = Metrics.new(namespace: settings.metrics_namespace,
                                                  app: settings.metrics_app,
-                                                 environment: ::Rails.env,
+                                                 environment: settings.environment(::Rails.env),
                                                  role: settings.metrics_role,
                                                  collect: collect,
                                                  logger: ::Rails.logger).start

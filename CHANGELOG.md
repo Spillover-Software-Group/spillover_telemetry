@@ -2,6 +2,14 @@
 
 Versions are semver tags. An application pins one.
 
+## v0.1.3
+
+- Metrics and errors report as the destination Kamal deployed to (`KAMAL_DESTINATION`), not as
+  `Rails.env`. Every destination of an application runs as the production Rails environment, so a
+  staging container's metrics landed on the production series, where the production alarms read
+  them. `SENTRY_ENVIRONMENT` still overrides errors; a process outside a container reports as
+  `Rails.env`, as before.
+
 ## v0.1.2
 
 - Traces cover an application's outbound HTTP as well as its inbound: the gem carries the Faraday

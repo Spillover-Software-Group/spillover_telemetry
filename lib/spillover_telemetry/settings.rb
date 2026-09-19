@@ -9,7 +9,7 @@ module SpilloverTelemetry
   #
   # A variable that is absent or empty reads as nil, and nil is what turns its signal off.
   Settings = Data.define(:metrics_namespace, :metrics_app, :metrics_role, :collect,
-                         :sentry_dsn, :sentry_environment, :release, :otlp_endpoint) do
+                         :sentry_dsn, :sentry_environment, :release, :otlp_endpoint, :destination) do
     def self.from_env(env = ENV)
       namespace = env["CLOUDWATCH_METRICS_NAMESPACE"].presence
 
@@ -23,7 +23,11 @@ module SpilloverTelemetry
         sentry_dsn: env["SENTRY_DSN"].presence,
         sentry_environment: env["SENTRY_ENVIRONMENT"].presence,
         release: env["KAMAL_VERSION"].presence,
-        otlp_endpoint: env["OTEL_EXPORTER_OTLP_ENDPOINT"].presence
+        otlp_endpoint: env["OTEL_EXPORTER_OTLP_ENDPOINT"].presence,
+        # Every destination of an application runs as the production Rails environment, so Rails.env
+        # cannot tell staging from production; the destination Kamal deployed to can, and Kamal sets
+        # it in every container.
+        destination: env["KAMAL_DESTINATION"].presence
       )
     end
 
@@ -31,6 +35,12 @@ module SpilloverTelemetry
     # that runs its queue inside Puma is the case that needs it: one process, both sets of numbers.
     def self.collect_from(value)
       value.presence&.split(",")&.map { |name| name.strip.to_sym }
+    end
+
+    # What a signal reports as its environment: what the deploy said for that signal, else the
+    # destination, else the Rails environment a process outside a container runs as.
+    def environment(named = nil, rails_env)
+      named || destination || rails_env
     end
 
     def metrics? = !metrics_namespace.nil?

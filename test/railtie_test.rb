@@ -35,6 +35,10 @@ class RailtieTest < ActiveSupport::TestCase
     assert_equal "staging", boot(SENTRY_DSN: DSN, SENTRY_ENVIRONMENT: "staging").dig(:sentry, :environment)
   end
 
+  test "reports errors as the destination Kamal deployed to where the deploy names none" do
+    assert_equal "staging", boot(SENTRY_DSN: DSN, KAMAL_DESTINATION: "staging").dig(:sentry, :environment)
+  end
+
   test "reports errors against the version Kamal deployed" do
     assert_equal "5f2d1c9", boot(SENTRY_DSN: DSN, KAMAL_VERSION: "5f2d1c9").dig(:sentry, :release)
   end
@@ -119,6 +123,12 @@ class RailtieTest < ActiveSupport::TestCase
     document = boot(as: "jobs", **METRICS).dig(:metrics, :document)
 
     assert_equal [ "my-reviews-api", "test", "web" ], document.values_at(:App, :Environment, :Role)
+  end
+
+  test "dimensions a document by the destination Kamal deployed to" do
+    document = boot(as: "jobs", **METRICS, KAMAL_DESTINATION: "staging").dig(:metrics, :document)
+
+    assert_equal "staging", document[:Environment]
   end
 
   private
