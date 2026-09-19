@@ -28,7 +28,9 @@ production monitoring, not a refactor.
 - A failure is logged once with `logger.warn` and never raised, and the same failure is not repeated
   until it changes.
 - The sampler's thread has `report_on_exception` off and is stopped `at_exit`.
-- A console, a runner and a rake task report nothing.
+- A console, a runner and a rake task report nothing, **including in a container whose environment
+  names collectors**. The process decides whether it reports and `CLOUDWATCH_METRICS_COLLECT` decides
+  what, never the other way round: a container passes the same environment to everything it starts.
 - A query the sampler makes goes through `with_connection`. Its thread lives as long as the process,
   and Active Record keeps a connection with the thread that asked until it is given back. **The suite
   cannot catch a regression here**: one connection serves the whole run, so a test passes either way.

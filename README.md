@@ -104,6 +104,9 @@ The one case that cannot be read from outside is a server that runs the queue in
 CLOUDWATCH_METRICS_COLLECT: puma,solid_queue
 ```
 
+It says *what* a reporting process reports, never *whether* one reports: the console in that same
+container sees the variable too, and still says nothing.
+
 ## The two extension points
 
 An application that needs more than the defaults adds to them rather than repeating them.

@@ -103,10 +103,16 @@ class RailtieTest < ActiveSupport::TestCase
     assert_not boot(**METRICS).dig(:metrics, :running)
   end
 
-  test "samples both runtimes where the deploy names both" do
-    telemetry = boot(**METRICS, CLOUDWATCH_METRICS_COLLECT: "puma,solid_queue")
+  test "samples the queue from a server where the deploy names both" do
+    telemetry = boot(as: "server", **METRICS, CLOUDWATCH_METRICS_COLLECT: "puma,solid_queue")
 
     assert_includes metric_names(telemetry), "QueueDepth"
+  end
+
+  # The container passes the same environment to everything it starts, so the console in the web
+  # container sees what the deploy named too.
+  test "samples nothing from a console where the deploy names collectors" do
+    assert_not boot(**METRICS, CLOUDWATCH_METRICS_COLLECT: "puma,solid_queue").dig(:metrics, :running)
   end
 
   test "dimensions a document by the application, environment and role the deploy named" do

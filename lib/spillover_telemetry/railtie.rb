@@ -34,7 +34,7 @@ module SpilloverTelemetry
     # models and a process still booting has nothing worth reporting.
     config.after_initialize do
       settings = SpilloverTelemetry.settings
-      collect = settings.collect || Railtie.collectors_for_this_process
+      collect = Railtie.collectors_for_this_process(settings.collect)
 
       if settings.metrics? && collect.any?
         SpilloverTelemetry.metrics = Metrics.new(namespace: settings.metrics_namespace,
@@ -46,19 +46,21 @@ module SpilloverTelemetry
       end
     end
 
-    # An initializer runs in every process the image starts and the container passes them all the
-    # same environment, so the process has to say what it is. `Rails::Server` is defined by the
-    # command that starts a server and by no other, in every worker whether Puma is clustered or
-    # not. `bin/jobs` starts the Solid Queue supervisor. A console, a runner and a rake task are
-    # neither, and report nothing rather than printing a document a minute into someone's terminal.
+    # What this process reports, given what the deploy named. The process decides whether it reports
+    # at all and the variable decides what, never the other way round: a container passes the same
+    # environment to everything it starts, so the console in the web container sees
+    # CLOUDWATCH_METRICS_COLLECT too and must still say nothing.
     #
-    # A process that is both, a server running its queue inside itself, says so with
-    # CLOUDWATCH_METRICS_COLLECT, which is the one case this cannot tell from the outside.
-    def self.collectors_for_this_process(program_name: $PROGRAM_NAME)
+    # `Rails::Server` is defined by the command that starts a server and by no other, in every worker
+    # whether Puma is clustered or not. `bin/jobs` starts the Solid Queue supervisor. A console, a
+    # runner and a rake task are neither, and report nothing rather than printing a document a minute
+    # into someone's terminal. A server that runs its queue inside itself is what the variable exists
+    # for, because that is the one thing a process cannot tell about itself.
+    def self.collectors_for_this_process(named)
       if ::Rails.const_defined?(:Server)
-        [ :puma ]
-      elsif program_name.end_with?("bin/jobs")
-        [ :solid_queue ]
+        named || [ :puma ]
+      elsif $PROGRAM_NAME.end_with?("bin/jobs")
+        named || [ :solid_queue ]
       else
         []
       end
