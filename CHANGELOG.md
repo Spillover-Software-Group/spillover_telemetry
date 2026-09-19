@@ -2,6 +2,17 @@
 
 Versions are semver tags. An application pins one.
 
+## v0.1.2
+
+- Traces cover an application's outbound HTTP as well as its inbound: the gem carries the Faraday
+  and HTTPX instrumentations beside the Rails bundle, and a call an application makes to another
+  service is a client span on the same trace as the request that made it. Neither instrumentation
+  loads its client and neither installs where the process has none, so an application adds nothing
+  to its own Gemfile and a process with no client is unchanged.
+
+  The HTTPX instrumentation patches httpx 1.6 and up. A process on an older httpx logs that it does
+  not and goes on tracing everything else.
+
 ## v0.1.1
 
 - The `puma` collector reports a clustered Puma. The sampling process in a cluster is the master,

@@ -55,6 +55,11 @@ production monitoring, not a refactor.
 - The bundle is installed with `use_all`. Naming the Rails instrumentation alone installs an empty
   umbrella: no middleware, no spans.
 - Active Record is left out and `/health` is untraced.
+- The Faraday and HTTPX instrumentations are required beside the Rails bundle and gated by nothing
+  here. Each one's own `present` block asks whether the client is defined and HTTPX's `compatible`
+  block asks whether the version is one it patches; the registry logs what it skipped and raises
+  nothing. A constant check in this gem would be a second copy of that, drifting from the version
+  the instrumentation actually supports.
 - The service name is never set in code. `OTEL_SERVICE_NAME` is the SDK's own variable, and a
   container that forgets it reporting as `unknown_service` is better than one quietly counted as
   another application.
@@ -97,7 +102,8 @@ OpenTelemetry constant at all" is only true of a process that never had one. A p
 report to a file rather than stdout, because boot writes to stdout too.
 
 Collectors are tested against the real runtime, never against a stand-in: a Puma server on an
-ephemeral port, and Solid Queue's own schema in SQLite.
+ephemeral port, and Solid Queue's own schema in SQLite. So are the HTTP clients: a probe makes a
+real request to a Puma server the test started, and reports the spans out of an in-memory exporter.
 
 ## Releasing
 

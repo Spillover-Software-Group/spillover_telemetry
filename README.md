@@ -10,15 +10,16 @@ writes no configuration at all.
 
 ```ruby
 # Gemfile
-gem "spillover_telemetry", github: "Spillover-Software-Group/spillover_telemetry", tag: "v0.1.1"
+gem "spillover_telemetry", github: "Spillover-Software-Group/spillover_telemetry", tag: "v0.1.2"
 ```
 
 Pinned to a tag, never floating. The repository is public, so the image build's `bundle install`
 clones it without a credential.
 
-The gem carries `sentry-rails` and the three OpenTelemetry gems, so those lines come out of the
-Gemfile. Bundler requires what a Gemfile names and never a gem's own dependencies, so OpenTelemetry
-is still loaded only where an endpoint is set.
+The gem carries `sentry-rails` and five OpenTelemetry gems, the SDK, the OTLP exporter and one
+instrumentation each for Rails, Faraday and httpx, so those lines come out of the Gemfile. Bundler
+requires what a Gemfile names and never a gem's own dependencies, so OpenTelemetry is still loaded
+only where an endpoint is set.
 
 Then set what the container should report, in `config/deploy.yml`:
 
@@ -69,10 +70,23 @@ turns it back on in its own `sentry` block.
 
 ### Traces
 
-The OpenTelemetry SDK with the Rails instrumentation bundle installed through `use_all`, Active
-Record left out (it traces transactions only, and a job process polling its queue is a transaction a
-second) and `/health` untraced. The service name comes from `OTEL_SERVICE_NAME`, the SDK's own
-variable: a container that forgets it reports as `unknown_service`.
+The OpenTelemetry SDK, covering the request that comes in and the calls the application makes out.
+
+| Instrumentation | Traces | Where it installs |
+|---|---|---|
+| The Rails bundle | the request, through Rack, Action Pack, Action View, Active Job and Active Support | everywhere, `/health` excepted |
+| Faraday | one client span per outbound call | where the process loaded Faraday 1.0 or newer |
+| httpx | one client span per outbound call | where the process loaded httpx 1.6 or newer |
+
+Active Record is left out of the bundle: it traces transactions and nothing else, and a job process
+polling its queue is a transaction a second. The health check is the load balancer asking every
+fifteen seconds, and answers nothing a trace could add to.
+
+An application adds no client instrumentation gem of its own. Both are carried here, neither loads
+its client, and each asks the process whether it has one: a process with neither client, or with an
+httpx older than the instrumentation patches, is told so in a line of its own and traces everything
+else. The service name comes from `OTEL_SERVICE_NAME`, the SDK's own variable: a container that
+forgets it reports as `unknown_service`.
 
 ## The variables
 
@@ -116,7 +130,7 @@ An application that needs more than the defaults adds to them rather than repeat
 config.spillover_telemetry.sentry = ->(sentry) { sentry.traces_sample_rate = 0.1 }
 
 config.spillover_telemetry.instrumentation = {
-  "OpenTelemetry::Instrumentation::HTTPX" => { enabled: true }
+  "OpenTelemetry::Instrumentation::ActiveRecord" => { enabled: true }
 }
 ```
 
