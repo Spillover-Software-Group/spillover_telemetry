@@ -15,6 +15,11 @@ require "json"
 # read before boot rather than a require inside a test.
 require ENV["DUMMY_HTTP_CLIENT"] if ENV["DUMMY_HTTP_CLIENT"]
 
+# How a container logs, where the container logs to stdout. An application requires it from its own
+# application file, above the class it configures, because the railtie has to be loaded before the
+# application is configured; a probe does the same.
+require "rails_semantic_logger" if ENV["DUMMY_SEMANTIC_LOGGER"]
+
 case ARGV.first
 when "server"
   # What `rails server` loads, and the only thing that defines Rails::Server.
@@ -90,6 +95,12 @@ def client_spans
   end
 end
 
+def log_report
+  return { defined: false } unless Object.const_defined?(:SemanticLogger)
+
+  { defined: true, environment: SemanticLogger.environment }
+end
+
 def metrics_report
   metrics = SpilloverTelemetry.metrics
 
@@ -100,7 +111,7 @@ end
 
 File.write(ENV.fetch("DUMMY_REPORT"),
            JSON.generate(sentry: sentry_report, traces: traces_report, metrics: metrics_report,
-                         client_spans: client_spans))
+                         log: log_report, client_spans: client_spans))
 
 # The report is written, and what a probe boots is more than it needs to shut down: Sentry's own
 # `at_exit` flushes to a DSN that points at nothing here and raises when it cannot. A boot that

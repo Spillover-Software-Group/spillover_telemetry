@@ -23,6 +23,12 @@ group :development, :test do
 
   gem "minitest"
   gem "puma"
+  # How an application that logs to stdout stamps its lines, required from its own application file.
+  # It is here and never in the gemspec: an application that logs to a file must not be made to
+  # carry it. The Rails pin above chooses the 4.x series, which is what one of the two applications
+  # runs; 5.x, which the other runs, wants Rails 7.2. What the gem sets is the same in both, because
+  # `config.semantic_logger` is the `SemanticLogger` module itself in both.
+  gem "rails_semantic_logger"
   gem "rackup"
   gem "rubocop-rails-omakase", require: false
   gem "solid_queue"

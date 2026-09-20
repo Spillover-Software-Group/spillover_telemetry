@@ -147,6 +147,28 @@ class RailtieTest < ActiveSupport::TestCase
     assert_equal "staging", document[:Environment]
   end
 
+  test "stamps a log line with the destination Kamal deployed to" do
+    telemetry = boot(DUMMY_SEMANTIC_LOGGER: "1", KAMAL_DESTINATION: "staging")
+
+    assert_equal "staging", telemetry.dig(:log, :environment)
+  end
+
+  test "stamps a log line with the Rails environment where the deploy names no destination" do
+    assert_equal "test", boot(DUMMY_SEMANTIC_LOGGER: "1").dig(:log, :environment)
+  end
+
+  test "leaves a log environment the application named alone" do
+    telemetry = boot(DUMMY_SEMANTIC_LOGGER: "1", DUMMY_LOG_ENVIRONMENT: "canary", KAMAL_DESTINATION: "staging")
+
+    assert_equal "canary", telemetry.dig(:log, :environment)
+  end
+
+  # Nothing of Semantic Logger is loaded by this gem, so an application that logs any other way is
+  # an application where there is nothing to set.
+  test "loads no logger of its own where the application has none" do
+    assert_not boot(KAMAL_DESTINATION: "staging").dig(:log, :defined)
+  end
+
   private
     def metric_names(telemetry)
       telemetry.dig(:metrics, :document, :_aws, :CloudWatchMetrics, 0, :Metrics).map { |metric| metric[:Name] }

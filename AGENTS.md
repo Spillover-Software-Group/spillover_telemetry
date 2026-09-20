@@ -65,6 +65,17 @@ production monitoring, not a refactor.
   container that forgets it reporting as `unknown_service` is better than one quietly counted as
   another application.
 
+**The log**
+
+- Semantic Logger is never loaded or depended on here. `config.semantic_logger` is the
+  `SemanticLogger` module itself, so the environment is set on it directly and only where the
+  application has loaded it.
+- It is set in `before_configuration`, which runs as the application class is opened, before its
+  application file, its environment files and its initializers. That ordering is the whole of how an
+  application's own `config.semantic_logger.environment` wins: there is no flag and no comparison,
+  only a value the application is free to write after. An initializer would be too late and would
+  silently take an application's environment away from it.
+
 ## Where things live
 
 | File | What it holds |
@@ -74,7 +85,7 @@ production monitoring, not a refactor.
 | `lib/spillover_telemetry/metrics/*_collector.rb` | One runtime each: `available?` and `values(now)` |
 | `lib/spillover_telemetry/errors.rb` | `Sentry.init` |
 | `lib/spillover_telemetry/traces.rb` | The SDK configuration |
-| `lib/spillover_telemetry/railtie.rb` | The only Rails-aware file: when each of the three runs |
+| `lib/spillover_telemetry/railtie.rb` | The only Rails-aware file: when each of the three runs, and the log's environment |
 
 The three signal files take their settings as arguments and know nothing of Rails, which is what
 makes them testable without booting anything. The Railtie is where `Rails.env`, `Rails.logger` and

@@ -29,5 +29,15 @@ module Dummy
         "OpenTelemetry::Instrumentation::Rack" => { untraced_endpoints: [ ENV["DUMMY_UNTRACED_ENDPOINT"] ] }
       }
     end
+
+    if defined?(::SemanticLogger)
+      # Semantic Logger's own default is a log file under the application root. A probe reports what
+      # it made of its environment and writes no line anybody reads.
+      config.rails_semantic_logger.add_file_appender = false
+
+      # An application that names the environment its lines are stamped with names it here, where
+      # the gem has already set one and an application's own word is the last.
+      config.semantic_logger.environment = ENV["DUMMY_LOG_ENVIRONMENT"] if ENV["DUMMY_LOG_ENVIRONMENT"]
+    end
   end
 end
