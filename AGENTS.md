@@ -19,7 +19,8 @@ production monitoring, not a refactor.
 **Metrics**
 
 - The metric names and their units are what `Metrics::UNITS` says. A rename breaks every alarm and
-  dashboard that reads it.
+  dashboard that reads it. Two collectors may report one name, and where they do it is the same
+  measurement in the same unit: an alarm reads a name, not a collector.
 - The dimension set is exactly `App`, `Environment`, `Role`, in that order.
 - One document per process per 60 seconds.
 - The document is written as one whole line to the stream, never through a logger, which would bury
@@ -101,9 +102,17 @@ installs nothing.
 OpenTelemetry constant at all" is only true of a process that never had one. A probe writes its
 report to a file rather than stdout, because boot writes to stdout too.
 
-Collectors are tested against the real runtime, never against a stand-in: a Puma server on an
-ephemeral port, and Solid Queue's own schema in SQLite. So are the HTTP clients: a probe makes a
-real request to a Puma server the test started, and reports the spans out of an in-memory exporter.
+Collectors are tested against the real runtime wherever the runtime can be had in a process: a Puma
+server on an ephemeral port, and Solid Queue's own schema in SQLite. So are the HTTP clients: a
+probe makes a real request to a Puma server the test started, and reports the spans out of an
+in-memory exporter.
+
+Sidekiq is the one that cannot be. Every number it reports it reports out of Redis, and the suite
+has none, so `test/support/sidekiq/api.rb` stands in for the three classes the collector reads and
+answers what the test running set. It is a file rather than a constant a test defines, because the
+collector's own `require "sidekiq/api"` is what loads it, from the load path
+`test/support/sidekiq_runtime.rb` puts `test/support` on. A collector that stopped asking for
+Sidekiq's read side would find nothing to read, which is how that require is covered.
 
 ## Releasing
 
