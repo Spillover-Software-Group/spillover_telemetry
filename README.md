@@ -1,7 +1,7 @@
 # spillover_telemetry
 
 How a Spillover Rails application reports on itself: **runtime metrics** on stdout, **errors** to
-Sentry, and **traces** to an OTLP endpoint.
+Sentry, **traces** to an OTLP endpoint, and the **environment** all three and the log agree on.
 
 Each signal is off until the deploy sets its one variable, and an application that adds the gem
 writes no configuration at all.
@@ -114,6 +114,18 @@ Each instrumentation in the Rails bundle patches Rails 7.1 and up and asks the p
 on, the same way. An application older than that reports its metrics and its errors as any other
 does, is told in a line of its own what went uninstalled, and traces nothing of the request.
 
+### The log
+
+An application that logs through `rails_semantic_logger` has every line stamped with an environment
+of its own, and Semantic Logger takes it from `RAILS_ENV`, which every destination of an application
+runs as. So the gem sets it too: a line says the environment the metric and the error beside it say,
+and a staging container's logs no longer read as production.
+
+Nothing here loads Semantic Logger or depends on it. An application that logs another way has
+nothing to set, and an application that names its own environment, in its application file, an
+environment file or an initializer, keeps it: the gem sets one before the application is configured
+and the application's own word is the last.
+
 ## The variables
 
 | Variable | What it does |
@@ -124,7 +136,7 @@ does, is told in a line of its own what went uninstalled, and traces nothing of 
 | `CLOUDWATCH_METRICS_COLLECT` | The collectors to report from, comma separated, where the default is wrong |
 | `SENTRY_DSN` | The switch for errors, and where they go |
 | `SENTRY_ENVIRONMENT` | The environment errors are reported as, where it is not the destination |
-| `KAMAL_DESTINATION` | The environment metrics and errors are reported as. Kamal sets it to the destination; a process outside a container reports as `Rails.env` |
+| `KAMAL_DESTINATION` | The environment metrics, errors and the log are reported as. Kamal sets it to the destination; a process outside a container reports as `Rails.env` |
 | `KAMAL_VERSION` | The release errors are reported against. Kamal sets it to the commit |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | The switch for traces, and where they go |
 | `OTEL_SERVICE_NAME` | The service traces are attributed to |

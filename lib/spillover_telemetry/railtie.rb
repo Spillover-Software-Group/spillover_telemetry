@@ -4,7 +4,8 @@ require "rails/railtie"
 
 module SpilloverTelemetry
   # The whole of the wiring: three signals, each started where the initializer it replaces used to
-  # sit, and each doing nothing at all until the deploy sets its one variable.
+  # sit, and each doing nothing at all until the deploy sets its one variable, and the one thing the
+  # log needs to say the same environment they do.
   class Railtie < ::Rails::Railtie
     config.spillover_telemetry = ::ActiveSupport::OrderedOptions.new
     # Called with the Sentry configuration inside `Sentry.init`, after the settings below, so an
@@ -12,6 +13,23 @@ module SpilloverTelemetry
     config.spillover_telemetry.sentry = nil
     # Instrumentation options by name, merged over the gem's own.
     config.spillover_telemetry.instrumentation = {}
+
+    # The environment a log line is stamped with, for an application that logs through Semantic
+    # Logger. Its own default is RAILS_ENV, which every destination of an application runs as, so a
+    # staging container's lines said production while the metric and the error beside them said
+    # staging. `config.semantic_logger` is the `SemanticLogger` module itself rather than a set of
+    # options applied later, so this is the value, read again at every line.
+    #
+    # It runs before the application is configured: the application class is not yet open, so
+    # everything an application writes, its application file, its environment files and its
+    # initializers, is later than this and an application that names its own environment keeps it.
+    # Semantic Logger is loaded by then wherever it is loaded at all, because a container's
+    # application file requires it above the class it configures.
+    config.before_configuration do
+      if defined?(::SemanticLogger)
+        ::SemanticLogger.environment = SpilloverTelemetry.settings.environment(::Rails.env)
+      end
+    end
 
     # Late enough that the application's own initializers have set either extension point, and early
     # enough that Sentry's middleware and OpenTelemetry's are both in the stack Rails builds after

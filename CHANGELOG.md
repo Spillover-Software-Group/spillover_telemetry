@@ -2,6 +2,17 @@
 
 Versions are semver tags. An application pins one.
 
+## v0.2.1
+
+- An application that logs through `rails_semantic_logger` stamps its lines with the destination
+  Kamal deployed to, the environment its metrics and its errors already report. Semantic Logger
+  takes that field from `RAILS_ENV`, which every destination of an application runs as, so a
+  staging container's logs read as production.
+
+  The gem sets it before the application is configured, so an application that names its own
+  `config.semantic_logger.environment` keeps it. Semantic Logger is neither loaded nor depended on
+  here: an application that logs another way is unchanged.
+
 ## v0.2.0
 
 - A `sidekiq` collector, beside `puma` and `solid_queue`. A process the `sidekiq` command started
