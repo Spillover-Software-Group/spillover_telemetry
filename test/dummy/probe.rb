@@ -5,7 +5,8 @@
 # switch is read once at boot, and because "no OpenTelemetry constant at all" is only true of a
 # process that never had one. The report is a file rather than stdout because boot writes there too.
 #
-# The kind of process is the first argument: a server, the Solid Queue supervisor, or neither.
+# The kind of process is the first argument: a server, the Solid Queue supervisor, a Sidekiq one,
+# or none of them.
 
 require "json"
 
@@ -22,6 +23,15 @@ when "server"
 when "jobs"
   # What `bin/jobs` is called, which is how the supervisor is told from a console or a runner.
   $PROGRAM_NAME = "/rails/bin/jobs"
+when "sidekiq"
+  # What the `sidekiq` command is called, and a Sidekiq that answers rather than one that would
+  # need a Redis to. See test/support/sidekiq_runtime.rb.
+  require "socket"
+  require "support/sidekiq_runtime"
+  SidekiqRuntime.claim(enqueued: 2, latencies: [ 30.0 ], retrying: 1,
+                       processes: [ { "busy" => 1, "beat" => Time.now.utc.to_f,
+                                      "hostname" => Socket.gethostname } ])
+  $PROGRAM_NAME = "/usr/local/bundle/bin/sidekiq"
 end
 
 require_relative "config/environment"

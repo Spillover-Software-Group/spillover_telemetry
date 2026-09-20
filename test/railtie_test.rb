@@ -103,6 +103,22 @@ class RailtieTest < ActiveSupport::TestCase
     assert_not_includes metric_names(boot(as: "jobs", **METRICS)), "PumaBacklog"
   end
 
+  test "samples the queue from a Sidekiq process" do
+    assert_includes metric_names(boot(as: "sidekiq", **METRICS)), "BusyWorkers"
+  end
+
+  test "reports nothing of Puma from a Sidekiq process" do
+    assert_not_includes metric_names(boot(as: "sidekiq", **METRICS)), "PumaBacklog"
+  end
+
+  # Solid Queue is in that process too, because the dummy application mounts it, and the two queue
+  # collectors report the same four names. Only the runtime the process is gets to fill them.
+  test "fills the shared queue metrics from Sidekiq in a Sidekiq process" do
+    document = boot(as: "sidekiq", **METRICS).dig(:metrics, :document)
+
+    assert_equal [ 2, 30, 1 ], document.values_at(:QueueDepth, :OldestReadyJobAge, :FailedJobs)
+  end
+
   test "samples nothing from a console, a runner or a rake task" do
     assert_not boot(**METRICS).dig(:metrics, :running)
   end

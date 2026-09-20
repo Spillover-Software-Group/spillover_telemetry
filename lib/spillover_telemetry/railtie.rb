@@ -52,8 +52,9 @@ module SpilloverTelemetry
     # CLOUDWATCH_METRICS_COLLECT too and must still say nothing.
     #
     # `Rails::Server` is defined by the command that starts a server and by no other, in every worker
-    # whether Puma is clustered or not. `bin/jobs` starts the Solid Queue supervisor. A console, a
-    # runner and a rake task are neither, and report nothing rather than printing a document a minute
+    # whether Puma is clustered or not. `bin/jobs` starts the Solid Queue supervisor and the
+    # `sidekiq` command starts a Sidekiq one, each named after what started it. A console, a runner
+    # and a rake task are none of them, and report nothing rather than printing a document a minute
     # into someone's terminal. A server that runs its queue inside itself is what the variable exists
     # for, because that is the one thing a process cannot tell about itself.
     def self.collectors_for_this_process(named)
@@ -61,6 +62,8 @@ module SpilloverTelemetry
         named || [ :puma ]
       elsif $PROGRAM_NAME.end_with?("bin/jobs")
         named || [ :solid_queue ]
+      elsif $PROGRAM_NAME.end_with?("sidekiq")
+        named || [ :sidekiq ]
       else
         []
       end

@@ -2,6 +2,29 @@
 
 Versions are semver tags. An application pins one.
 
+## v0.2.0
+
+- A `sidekiq` collector, beside `puma` and `solid_queue`. A process the `sidekiq` command started
+  reports it without a deploy saying so, and `CLOUDWATCH_METRICS_COLLECT` names it where a process
+  is something else.
+
+  It reports the Solid Queue collector's four names, meaning the same thing in the same unit, so
+  every alarm and dashboard already built on them covers an application that runs its jobs under
+  Sidekiq: `QueueDepth`, `OldestReadyJobAge`, `FailedJobs` and `SupervisorHeartbeatAge`. Beside
+  them, `ScheduledJobs`, `Processes` and `BusyWorkers`.
+
+  `FailedJobs` is the retry set and the dead set together, not the number Sidekiq keeps under that
+  name, which is every job that has ever failed and so only climbs. `SupervisorHeartbeatAge` is the
+  newest beat of a process on this host, because Sidekiq has no supervisor over them to ask and a
+  role spread over a pair of hosts must not have a dead half of it covered for by the live one.
+  `Processes` and `BusyWorkers` count every host, being facts about the queue rather than the host.
+
+  The gem takes no dependency on sidekiq. The collector asks whether the process has one, and asks
+  it for `sidekiq/api`, which a process that runs jobs does not otherwise load.
+- `railties >= 6.1`, so an application on Rails 6.1 reports its metrics and its errors. Each
+  instrumentation in the Rails bundle patches Rails 7.1 and up and says so itself, so that
+  application traces nothing of the request and is told what went uninstalled.
+
 ## v0.1.3
 
 - Metrics and errors report as the destination Kamal deployed to (`KAMAL_DESTINATION`), not as

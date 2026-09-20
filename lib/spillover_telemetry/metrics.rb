@@ -3,6 +3,7 @@
 require "json"
 
 require_relative "metrics/puma_collector"
+require_relative "metrics/sidekiq_collector"
 require_relative "metrics/solid_queue_collector"
 
 module SpilloverTelemetry
@@ -20,14 +21,17 @@ module SpilloverTelemetry
     INTERVAL = 60
 
     # The name a process asks for, and the class that answers it. A new runtime is a collector
-    # beside these two and a line here; nothing else knows the names.
+    # beside these and a line here; nothing else knows the names.
     COLLECTORS = {
       puma: PumaCollector,
+      sidekiq: SidekiqCollector,
       solid_queue: SolidQueueCollector
     }.freeze
 
     # Every metric any collector can report, with its unit. CloudWatch takes the unit from the
-    # document, so a name missing here is a metric that would be graphed as a bare number.
+    # document, so a name missing here is a metric that would be graphed as a bare number. Two
+    # collectors may name the same metric, and where they do they mean the same thing in the same
+    # unit: a queue is a queue whichever runtime is behind it.
     UNITS = COLLECTORS.each_value.reduce({}) { |units, collector| units.merge(collector::UNITS) }.freeze
 
     def initialize(namespace:, app:, environment:, role:, collect:, logger:, out: $stdout)
