@@ -26,7 +26,11 @@ Gem::Specification.new do |spec|
   spec.files = Dir["lib/**/*.rb", "README.md", "CHANGELOG.md", "LICENSE"]
   spec.require_paths = [ "lib" ]
 
-  spec.add_dependency "railties", ">= 7.1"
+  # The oldest Rails any application taking this gem runs. Nothing here calls a Rails API newer than
+  # that: the Railtie, the two extension points and the queue collector's `with_connection` are all
+  # 6.1's. The OpenTelemetry instrumentations for Rails patch 7.1 and up and say so themselves, so a
+  # 6.1 application reports metrics and errors and is told what it is not tracing.
+  spec.add_dependency "railties", ">= 6.1"
   spec.add_dependency "sentry-rails", ">= 7.0"
 
   # Carried so that an application's Gemfile names this gem and nothing else, and loaded only by

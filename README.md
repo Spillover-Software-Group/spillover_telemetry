@@ -74,7 +74,7 @@ The OpenTelemetry SDK, covering the request that comes in and the calls the appl
 
 | Instrumentation | Traces | Where it installs |
 |---|---|---|
-| The Rails bundle | the request, through Rack, Action Pack, Action View, Active Job and Active Support | everywhere, `/health` excepted |
+| The Rails bundle | the request, through Rack, Action Pack, Action View, Active Job and Active Support | where the process is on Rails 7.1 or newer, `/health` excepted |
 | Faraday | one client span per outbound call | where the process loaded Faraday 1.0 or newer |
 | httpx | one client span per outbound call | where the process loaded httpx 1.6 or newer |
 
@@ -87,6 +87,10 @@ its client, and each asks the process whether it has one: a process with neither
 httpx older than the instrumentation patches, is told so in a line of its own and traces everything
 else. The service name comes from `OTEL_SERVICE_NAME`, the SDK's own variable: a container that
 forgets it reports as `unknown_service`.
+
+Each instrumentation in the Rails bundle patches Rails 7.1 and up and asks the process which it is
+on, the same way. An application older than that reports its metrics and its errors as any other
+does, is told in a line of its own what went uninstalled, and traces nothing of the request.
 
 ## The variables
 
