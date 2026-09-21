@@ -2,6 +2,13 @@
 
 Versions are semver tags. An application pins one.
 
+## v0.2.2
+
+- A process exiting is no longer an error. `bin/rails runner` reports whatever ended it, so a
+  one-off command that exits non-zero raised a `SystemExit` issue in Sentry that nobody could act
+  on: the exit status had already said so where the command was typed. `SystemExit` joins the
+  exceptions the SDK excludes of its own accord, for every application at once.
+
 ## v0.2.1
 
 - An application that logs through `rails_semantic_logger` stamps its lines with the destination

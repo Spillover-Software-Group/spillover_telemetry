@@ -35,6 +35,20 @@ class ErrorsTest < ActiveSupport::TestCase
     assert_not Sentry.configuration.send_default_pii
   end
 
+  # `bin/rails runner` reports a non-zero exit as a SystemExit, which is the shell's answer to the
+  # person who typed the command rather than an error anyone can act on in Sentry.
+  test "does not send a process exiting" do
+    install
+
+    assert_includes Sentry.configuration.excluded_exceptions, "SystemExit"
+  end
+
+  test "keeps the exceptions the SDK excludes of its own accord" do
+    install
+
+    assert_includes Sentry.configuration.excluded_exceptions, "ActiveRecord::RecordNotFound"
+  end
+
   test "lets the caller add to the configuration" do
     install(customize: ->(sentry) { sentry.max_breadcrumbs = 7 })
 

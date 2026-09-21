@@ -24,6 +24,12 @@ module SpilloverTelemetry
         # of the SQL and the controller timings is traffic and cost nobody asked for. Set before the
         # block, so an application that wants it can have it.
         config.rails.structured_logging.enabled = false
+        # `bin/rails runner` reports whatever ended it, and an ordinary non-zero exit ends it with
+        # a SystemExit: a one-off command that a person ran and watched fail arrives as an
+        # unresolved issue nobody can act on, since the exit status already said so where it was
+        # typed. An application raising SystemExit in a request or a job would be reporting the
+        # same thing, so the exclusion is the gem's rather than each application's.
+        config.excluded_exceptions += [ "SystemExit" ]
         # Everything an application wants beyond those, so that it never writes a second
         # `Sentry.init` and loses them.
         customize&.call(config)
