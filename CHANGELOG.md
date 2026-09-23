@@ -14,6 +14,10 @@ Versions are semver tags. An application pins one.
   (`request.remote_ip`); the application names the id and the email where it authenticates, in one
   line: `SpilloverTelemetry.identify_user(id:, email:)`. A request that names nobody names the
   address alone, and a job names nobody.
+- Sentry's httpx adapter is no longer required. It never ran: it registers a patch named `httpx`,
+  which is not among the patches `Sentry.init` applies, and its breadcrumbs wait on an
+  `http_logger` breadcrumbs logger nobody sets. No outbound call was ever a breadcrumb, and none
+  becomes one, since an outbound URL can carry a token.
 
 ## v0.2.2
 

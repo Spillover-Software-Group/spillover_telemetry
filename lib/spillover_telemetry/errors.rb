@@ -8,11 +8,6 @@ module SpilloverTelemetry
   # be loaded in every process and still cost a container with no DSN nothing.
   module Errors
     def self.install(dsn:, environment:, release:, customize: nil)
-      # Outbound calls made with httpx become breadcrumbs on whatever error follows them. The
-      # adapter is Sentry's own, required here rather than at load because an application that does
-      # not use httpx has nothing to adapt.
-      require "httpx/adapters/sentry" if Object.const_defined?(:HTTPX)
-
       ::Sentry.init do |config|
         config.dsn = dsn
         # Both destinations of an application run as the production Rails environment; the

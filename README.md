@@ -88,9 +88,7 @@ about the queue, the way its depth is, so both hosts report the same pair of num
 
 ### Errors
 
-`Sentry.init` with the DSN, the environment and the release, so `send_default_pii` stays off. Where
-`httpx` is loaded, Sentry's own adapter for it is required, and an outbound call becomes a breadcrumb
-on whatever error follows it.
+`Sentry.init` with the DSN, the environment and the release, so `send_default_pii` stays off.
 
 Every error in a request names its user, by the id, the email and the IP address, and says of the
 request only the method and the URL without its query: no cookies, no headers, no body.
