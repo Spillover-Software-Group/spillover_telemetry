@@ -44,8 +44,9 @@ production monitoring, not a refactor.
 - `Sentry.init` sets the DSN, the environment and the release, and nothing else it does not have to,
   so `send_default_pii` stays off. Anything more belongs in an application's own
   `config.spillover_telemetry.sentry`, never in a second `Sentry.init`.
-- **An error says of its request only the method and the URL.** The headers are the one part of
-  it `send_default_pii` off leaves in, so `data_collection.http_headers.request` is off beside it.
+- **An error says of its request only the method, the URL and the user agent.** The headers are the
+  one part of it `send_default_pii` off leaves in, so `data_collection.http_headers.request` is an
+  allow list of `User-Agent` beside it.
 - **An error in a request names its user, and a job's names nobody.** The address comes from
   `ClientAddress`, placed inside the scope sentry-rails opens for each request, and the id and the
   email from `identify_user`, which adds to that scope's user rather than replacing it.

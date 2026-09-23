@@ -4,11 +4,11 @@ Versions are semver tags. An application pins one.
 
 ## v0.3.0
 
-- An error sends none of its request's headers. `send_default_pii` off kept the cookies, the body,
-  the query string and the address out, but sent the headers, masked only where a name looked
-  sensitive: the `User-Agent`, a `Referer` that can carry the query of another page, and the
-  server's name and port beside them. An error says of its request only the method and the URL
-  without its query.
+- An error sends no value of its request's headers but the `User-Agent`. `send_default_pii` off
+  kept the cookies, the body, the query string and the address out, but sent the headers, masked
+  only where a name looked sensitive: a `Referer` that can carry the query of another page among
+  them, and the server's name and port beside them. Their names stay, as the SDK keeps them. An
+  error says of its request only the method, the URL without its query and the user agent.
 - Every error in a request names its user: the id, the email and the IP address. The gem names the
   address of every request, as Rails reads it through the proxies the application trusts
   (`request.remote_ip`); the application names the id and the email where it authenticates, in one

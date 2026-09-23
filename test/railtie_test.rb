@@ -20,6 +20,10 @@ class RailtieTest < ActiveSupport::TestCase
   # application is called by the last.
   BEHIND_PROXIES = { "REMOTE_ADDR" => "172.18.0.2", "HTTP_X_FORWARDED_FOR" => "198.51.100.23, 10.0.1.17" }.freeze
   SIGNED_IN = "id=7&email=owner%40example.com"
+  # A form posted with everything a browser sends beside it: a query, a cookie and the headers.
+  FORM = { path: "/fail?token=secret", method: "POST", input: "reply=Thanks",
+           env: { "CONTENT_TYPE" => "application/x-www-form-urlencoded", "HTTP_COOKIE" => "session=secret",
+                  "HTTP_USER_AGENT" => "Mozilla/5.0", "HTTP_REFERER" => "https://example.org/?token=secret" } }.freeze
 
   test "reports nothing at all where the deploy set no variable" do
     telemetry = boot
@@ -54,14 +58,19 @@ class RailtieTest < ActiveSupport::TestCase
     assert_not boot(SENTRY_DSN: DSN).dig(:sentry, :structured_logging)
   end
 
-  # A form posted with everything a browser sends beside it: a query, a cookie and the headers.
-  test "says nothing of a failed request but its method and its URL" do
-    request = { path: "/fail?token=secret", method: "POST", input: "reply=Thanks",
-                env: { "CONTENT_TYPE" => "application/x-www-form-urlencoded", "HTTP_COOKIE" => "session=secret",
-                       "HTTP_USER_AGENT" => "Mozilla/5.0", "HTTP_REFERER" => "https://example.org/?token=secret" } }
+  test "sends the user agent of a failed request" do
+    assert_equal "Mozilla/5.0", boot(SENTRY_DSN: DSN, requests: [ FORM ]).dig(:requests, 0, :request, :headers, :"User-Agent")
+  end
 
-    assert_equal({ method: "POST", url: "http://example.org/fail", headers: {}, env: {}, cookies: {} },
-                 boot(SENTRY_DSN: DSN, requests: [ request ]).dig(:requests, 0, :request))
+  # The SDK keeps the name of every header it does not send, with the value masked.
+  test "sends nothing else of a failed request but its method and its URL" do
+    request = boot(SENTRY_DSN: DSN, requests: [ FORM ]).dig(:requests, 0, :request)
+
+    assert_equal({ method: "POST", url: "http://example.org/fail", cookies: {},
+                   headers: { "Content-Length": "[Filtered]", "Content-Type": "[Filtered]", Cookie: "[Filtered]",
+                              Referer: "[Filtered]", "X-Request-Id": "[Filtered]" },
+                   env: { SERVER_NAME: "[Filtered]", SERVER_PORT: "[Filtered]" } },
+                 request.merge(headers: request[:headers].except(:"User-Agent")))
   end
 
   test "reports an error in a request as the client it came from" do

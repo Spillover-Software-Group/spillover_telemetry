@@ -91,7 +91,8 @@ about the queue, the way its depth is, so both hosts report the same pair of num
 `Sentry.init` with the DSN, the environment and the release, so `send_default_pii` stays off.
 
 Every error in a request names its user, by the id, the email and the IP address, and says of the
-request only the method and the URL without its query: no cookies, no headers, no body.
+request only the method, the URL without its query and the user agent: no cookies, no body, no other
+header's value.
 
 - **The address** is named by the gem, for every request: `request.remote_ip`, which Rails reads
   past the proxies it trusts. It trusts private addresses, where the load balancer and kamal-proxy
@@ -103,8 +104,9 @@ request only the method and the URL without its query: no cookies, no headers, n
   `Account#to_gid_param`, so one person is one user in every Sentry project.
 - A request that names nobody names the address alone. A job has no request and names nobody.
 
-`send_default_pii` off leaves out everything about the request but the headers, and the gem leaves
-those out too, since the `Referer` among them can carry the query of another page.
+`send_default_pii` off leaves out everything about the request but the headers. Of those the gem
+sends the `User-Agent`, which tells a browser from another service calling, and masks the rest, since
+the `Referer` among them can carry the query of another page. The SDK keeps their names.
 
 sentry-rails' structured logging is turned off. Its default forwards every Active Record and Action
 Controller log line to Sentry, and those logs already go to CloudWatch. An application that wants it

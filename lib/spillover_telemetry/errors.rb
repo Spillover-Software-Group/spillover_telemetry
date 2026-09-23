@@ -14,10 +14,13 @@ module SpilloverTelemetry
         # destination is what tells them apart. Kamal names the running version after the commit.
         config.environment = environment
         config.release = release
-        # An error says of the request it happened in only the method and the URL. With
-        # `send_default_pii` off the SDK leaves out the cookies, the body, the query string and the
-        # address, but not the headers, nor the Rack environment it filters by the same setting.
-        config.data_collection.http_headers.request = false
+        # An error says of the request it happened in only the method, the URL and the user agent,
+        # which tells a browser from another service calling. With `send_default_pii` off the SDK
+        # leaves out the cookies, the body, the query string and the address, but not the headers,
+        # nor the Rack environment it filters by the same setting. An allow list sends the user
+        # agent's value alone; the SDK keeps every other name, its value masked.
+        config.data_collection.http_headers.request =
+          ::Sentry::DataCollection::KeyValueCollection.new(mode: :allow_list, terms: [ /\AUser-Agent\z/ ])
         # sentry-rails forwards every Active Record and Action Controller log line to Sentry unless
         # it is told not to. Sentry is where errors go, the logs already go to CloudWatch, and a copy
         # of the SQL and the controller timings is traffic and cost nobody asked for. Set before the
