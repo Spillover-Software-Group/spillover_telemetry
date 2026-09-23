@@ -15,6 +15,11 @@ class RailtieTest < ActiveSupport::TestCase
     CLOUDWATCH_METRICS_APP: "my-reviews-api",
     CLOUDWATCH_METRICS_ROLE: "web"
   }.freeze
+  # A client at 198.51.100.23 reaching the application through a load balancer and a proxy on the
+  # private network. Each adds the address it was called from to X-Forwarded-For, and the
+  # application is called by the last.
+  BEHIND_PROXIES = { "REMOTE_ADDR" => "172.18.0.2", "HTTP_X_FORWARDED_FOR" => "198.51.100.23, 10.0.1.17" }.freeze
+  SIGNED_IN = "id=7&email=owner%40example.com"
 
   test "reports nothing at all where the deploy set no variable" do
     telemetry = boot
@@ -57,6 +62,35 @@ class RailtieTest < ActiveSupport::TestCase
 
     assert_equal({ method: "POST", url: "http://example.org/fail", headers: {}, env: {}, cookies: {} },
                  boot(SENTRY_DSN: DSN, requests: [ request ]).dig(:requests, 0, :request))
+  end
+
+  test "reports an error in a request as the client it came from" do
+    request = { path: "/fail", env: BEHIND_PROXIES }
+
+    assert_equal({ ip_address: "198.51.100.23" }, boot(SENTRY_DSN: DSN, requests: [ request ]).dig(:requests, 0, :user))
+  end
+
+  test "reports an error as the user the application identified" do
+    request = { path: "/fail?#{SIGNED_IN}", env: BEHIND_PROXIES }
+
+    assert_equal({ id: "7", email: "owner@example.com", ip_address: "198.51.100.23" },
+                 boot(SENTRY_DSN: DSN, requests: [ request ]).dig(:requests, 0, :user))
+  end
+
+  test "forgets the user when the request ends" do
+    requests = [ { path: "/fail?#{SIGNED_IN}", env: BEHIND_PROXIES }, { path: "/fail", env: BEHIND_PROXIES } ]
+
+    assert_equal({ ip_address: "198.51.100.23" }, boot(SENTRY_DSN: DSN, requests: requests).dig(:requests, 1, :user))
+  end
+
+  test "answers a request whose address Rails cannot tell" do
+    request = { path: "/answer", env: BEHIND_PROXIES.merge("HTTP_CLIENT_IP" => "192.0.2.1") }
+
+    assert_equal 200, boot(SENTRY_DSN: DSN, requests: [ request ]).dig(:requests, 0, :status)
+  end
+
+  test "answers a request that identifies its user where no DSN is set" do
+    assert_equal 200, boot(requests: [ { path: "/answer?#{SIGNED_IN}" } ]).dig(:requests, 0, :status)
   end
 
   test "lets the application add to the Sentry configuration" do

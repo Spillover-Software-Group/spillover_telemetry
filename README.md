@@ -35,6 +35,12 @@ env:
     - SENTRY_DSN
 ```
 
+And where the application authenticates a request, name the user it is for:
+
+```ruby
+SpilloverTelemetry.identify_user(id: account.to_gid_param, email: account.email)
+```
+
 That is the whole of it.
 
 ## What it reports
@@ -86,9 +92,21 @@ about the queue, the way its depth is, so both hosts report the same pair of num
 `httpx` is loaded, Sentry's own adapter for it is required, and an outbound call becomes a breadcrumb
 on whatever error follows it.
 
-An error says of the request it happened in only the method and the URL, without its query: no
-cookies, no headers, no body. `send_default_pii` off leaves out everything but the headers, and the
-gem leaves those out too, since the `Referer` among them can carry the query of another page.
+Every error in a request names its user, by the id, the email and the IP address, and says of the
+request only the method and the URL without its query: no cookies, no headers, no body.
+
+- **The address** is named by the gem, for every request: `request.remote_ip`, which Rails reads
+  past the proxies it trusts. It trusts private addresses, where the load balancer and kamal-proxy
+  are, so an application with a proxy on a public address in front of it names that proxy in
+  `config.action_dispatch.trusted_proxies`. A request whose `Client-Ip` and `X-Forwarded-For`
+  disagree names none.
+- **The id and the email** are named by the application, with `identify_user`, where it
+  authenticates. Where its users are accounts accounts, the id is the account's `sub` claim,
+  `Account#to_gid_param`, so one person is one user in every Sentry project.
+- A request that names nobody names the address alone. A job has no request and names nobody.
+
+`send_default_pii` off leaves out everything about the request but the headers, and the gem leaves
+those out too, since the `Referer` among them can carry the query of another page.
 
 sentry-rails' structured logging is turned off. Its default forwards every Active Record and Action
 Controller log line to Sentry, and those logs already go to CloudWatch. An application that wants it

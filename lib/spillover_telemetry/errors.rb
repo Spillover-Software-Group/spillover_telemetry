@@ -39,5 +39,13 @@ module SpilloverTelemetry
         customize&.call(config)
       end
     end
+
+    # Adds to the user every error in the current scope names. sentry-rails opens a scope for each
+    # request and each job and closes it when they end, so a user goes with the request that named
+    # them. Where errors are not reported there is no scope, and this does nothing.
+    def self.identify(**user)
+      scope = ::Sentry.get_current_scope
+      scope&.set_user(scope.user.merge(user))
+    end
   end
 end

@@ -46,6 +46,13 @@ production monitoring, not a refactor.
   `config.spillover_telemetry.sentry`, never in a second `Sentry.init`.
 - **An error says of its request only the method and the URL.** The headers are the one part of
   it `send_default_pii` off leaves in, so `data_collection.http_headers.request` is off beside it.
+- **An error in a request names its user, and a job's names nobody.** The address comes from
+  `ClientAddress`, placed inside the scope sentry-rails opens for each request, and the id and the
+  email from `identify_user`, which adds to that scope's user rather than replacing it.
+  `data_collection.user_info` stays off: it would have the SDK name an address its own way rather
+  than Rails', and copy the user of the request that enqueued a job onto the job.
+- **Telemetry never fails a request.** `ClientAddress` leaves out an address Rails refuses to name
+  rather than raise.
 - **sentry-rails' structured logging is off.** Left alone it forwards every Active Record and Action
   Controller log line to Sentry. The logs already go to CloudWatch, Sentry is where errors go, and a
   second copy of the SQL and the controller timings is traffic and cost nobody asked for. It is set
@@ -85,13 +92,14 @@ production monitoring, not a refactor.
 | `lib/spillover_telemetry/settings.rb` | Every environment variable, read once |
 | `lib/spillover_telemetry/metrics.rb` | The document, the sampler, the collector registry |
 | `lib/spillover_telemetry/metrics/*_collector.rb` | One runtime each: `available?` and `values(now)` |
-| `lib/spillover_telemetry/errors.rb` | `Sentry.init` |
+| `lib/spillover_telemetry/errors.rb` | `Sentry.init`, and the user an error names |
+| `lib/spillover_telemetry/client_address.rb` | The middleware that names the address a request came from |
 | `lib/spillover_telemetry/traces.rb` | The SDK configuration |
-| `lib/spillover_telemetry/railtie.rb` | The only Rails-aware file: when each of the three runs, and the log's environment |
+| `lib/spillover_telemetry/railtie.rb` | When each of the three runs, where the middleware sits, and the log's environment |
 
 The three signal files take their settings as arguments and know nothing of Rails, which is what
 makes them testable without booting anything. The Railtie is where `Rails.env`, `Rails.logger` and
-the process's own shape are read.
+the process's own shape are read, and `ClientAddress` where a request is.
 
 Its install runs `after: :load_config_initializers`: late enough for an application's own
 initializers to have set an extension point, early enough that Sentry's middleware and

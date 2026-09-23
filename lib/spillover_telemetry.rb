@@ -4,6 +4,7 @@ require_relative "spillover_telemetry/version"
 require_relative "spillover_telemetry/settings"
 require_relative "spillover_telemetry/metrics"
 require_relative "spillover_telemetry/errors"
+require_relative "spillover_telemetry/client_address"
 require_relative "spillover_telemetry/traces"
 
 # How a Spillover Rails application reports on itself: runtime metrics on stdout, errors to Sentry,
@@ -19,6 +20,13 @@ module SpilloverTelemetry
     # a variable nobody can test.
     def settings
       @settings ||= Settings.from_env
+    end
+
+    # The user the current request is for, named where the application authenticates it. Every
+    # error the request raises names them by this id and email, beside the address the gem names
+    # for every request.
+    def identify_user(id:, email:)
+      Errors.identify(id: id, email: email)
     end
   end
 end

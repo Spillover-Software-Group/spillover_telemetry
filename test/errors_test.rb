@@ -1,9 +1,18 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "sentry/test_helper"
 
 class ErrorsTest < ActiveSupport::TestCase
+  include Sentry::TestHelper
+
   DSN = "http://public@127.0.0.1:1/1"
+
+  class ReportingJob < ActiveJob::Base
+    def perform
+      Sentry.capture_message("The job failed")
+    end
+  end
 
   def teardown
     Sentry.close if Sentry.initialized?
@@ -51,6 +60,20 @@ class ErrorsTest < ActiveSupport::TestCase
     install(release: "5f2d1c9", customize: ->(sentry) { sentry.max_breadcrumbs = 7 })
 
     assert_equal "5f2d1c9", Sentry.configuration.release
+  end
+
+  # A job has no request, so nobody to name, whoever the request that enqueued it was for.
+  test "reports a job as nobody's" do
+    install
+    setup_sentry_test
+    job = Sentry.with_scope do
+      SpilloverTelemetry.identify_user(id: "7", email: "owner@example.com")
+      ReportingJob.new.serialize
+    end
+
+    ActiveJob::Base.execute(job)
+
+    assert_empty sentry_events.last.user
   end
 
   private

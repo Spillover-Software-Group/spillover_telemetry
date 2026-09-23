@@ -105,19 +105,26 @@ end
 # What the application answered each request DUMMY_REQUESTS names, and what the error it reported
 # said. Sentry keeps the configuration the boot gave it and swaps only its transport for the SDK's
 # own test double, so nothing leaves the process.
+#
+# The requests are served in turn by one thread other than the one that booted the application, as
+# a Puma thread serves one request after another. Sentry keeps a hub for each thread and copies each
+# request's from the boot thread's, so anything written there rather than in the request's own scope
+# would reach the request's errors here and nowhere in a server.
 def requests_report
   requests = JSON.parse(ENV.fetch("DUMMY_REQUESTS"))
   return [] if requests.empty?
 
   Sentry::TestHelper.setup_sentry_test if Sentry.initialized?
 
-  requests.map do |request|
-    env = Rack::MockRequest.env_for(request.fetch("path"), method: request["method"], input: request["input"])
-    status, = Rails.application.call(env.merge(request.fetch("env", {})))
-    event = Sentry::TestHelper.sentry_events.pop if Sentry.initialized?
+  Thread.new do
+    requests.map do |request|
+      env = Rack::MockRequest.env_for(request.fetch("path"), method: request["method"], input: request["input"])
+      status, = Rails.application.call(env.merge(request.fetch("env", {})))
+      event = Sentry::TestHelper.sentry_events.pop if Sentry.initialized?
 
-    { status: status, user: event&.user, request: event&.request&.to_h }
-  end
+      { status: status, user: event&.user, request: event&.request&.to_h }
+    end
+  end.value
 end
 
 def metrics_report

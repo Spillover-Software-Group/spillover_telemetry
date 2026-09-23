@@ -43,6 +43,8 @@ module SpilloverTelemetry
                        environment: settings.environment(settings.sentry_environment, ::Rails.env),
                        release: settings.release,
                        customize: options.sentry)
+        # Inside the scope sentry-rails opens for each request, and after ActionDispatch::RemoteIp.
+        app.config.middleware.insert_after ::Sentry::Rails::CaptureExceptions, ClientAddress
       end
 
       Traces.install(options.instrumentation) if settings.traces?

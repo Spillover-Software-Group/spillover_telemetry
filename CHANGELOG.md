@@ -9,6 +9,11 @@ Versions are semver tags. An application pins one.
   sensitive: the `User-Agent`, a `Referer` that can carry the query of another page, and the
   server's name and port beside them. An error says of its request only the method and the URL
   without its query.
+- Every error in a request names its user: the id, the email and the IP address. The gem names the
+  address of every request, as Rails reads it through the proxies the application trusts
+  (`request.remote_ip`); the application names the id and the email where it authenticates, in one
+  line: `SpilloverTelemetry.identify_user(id:, email:)`. A request that names nobody names the
+  address alone, and a job names nobody.
 
 ## v0.2.2
 
