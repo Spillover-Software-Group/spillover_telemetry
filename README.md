@@ -10,7 +10,7 @@ writes no configuration at all.
 
 ```ruby
 # Gemfile
-gem "spillover_telemetry", github: "Spillover-Software-Group/spillover_telemetry", tag: "v0.2.2"
+gem "spillover_telemetry", github: "Spillover-Software-Group/spillover_telemetry", tag: "v0.3.0"
 ```
 
 Pinned to a tag, never floating. The repository is public, so the image build's `bundle install`
