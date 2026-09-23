@@ -44,6 +44,8 @@ production monitoring, not a refactor.
 - `Sentry.init` sets the DSN, the environment and the release, and nothing else it does not have to,
   so `send_default_pii` stays off. Anything more belongs in an application's own
   `config.spillover_telemetry.sentry`, never in a second `Sentry.init`.
+- **An error says of its request only the method and the URL.** The headers are the one part of
+  it `send_default_pii` off leaves in, so `data_collection.http_headers.request` is off beside it.
 - **sentry-rails' structured logging is off.** Left alone it forwards every Active Record and Action
   Controller log line to Sentry. The logs already go to CloudWatch, Sentry is where errors go, and a
   second copy of the SQL and the controller timings is traffic and cost nobody asked for. It is set

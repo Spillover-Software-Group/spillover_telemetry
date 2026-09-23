@@ -2,6 +2,14 @@
 
 Versions are semver tags. An application pins one.
 
+## v0.3.0
+
+- An error sends none of its request's headers. `send_default_pii` off kept the cookies, the body,
+  the query string and the address out, but sent the headers, masked only where a name looked
+  sensitive: the `User-Agent`, a `Referer` that can carry the query of another page, and the
+  server's name and port beside them. An error says of its request only the method and the URL
+  without its query.
+
 ## v0.2.2
 
 - A process exiting is no longer an error. `bin/rails runner` reports whatever ended it, so a

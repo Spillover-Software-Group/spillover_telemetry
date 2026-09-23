@@ -9,6 +9,7 @@
 # or none of them.
 
 require "json"
+require "sentry/test_helper"
 
 # The outbound HTTP client this process has loaded, where it has one. An application loads it from
 # its Gemfile, which is a thing its whole process either did or did not do, so here it is a variable
@@ -101,6 +102,24 @@ def log_report
   { defined: true, environment: SemanticLogger.environment }
 end
 
+# What the application answered each request DUMMY_REQUESTS names, and what the error it reported
+# said. Sentry keeps the configuration the boot gave it and swaps only its transport for the SDK's
+# own test double, so nothing leaves the process.
+def requests_report
+  requests = JSON.parse(ENV.fetch("DUMMY_REQUESTS"))
+  return [] if requests.empty?
+
+  Sentry::TestHelper.setup_sentry_test if Sentry.initialized?
+
+  requests.map do |request|
+    env = Rack::MockRequest.env_for(request.fetch("path"), method: request["method"], input: request["input"])
+    status, = Rails.application.call(env.merge(request.fetch("env", {})))
+    event = Sentry::TestHelper.sentry_events.pop if Sentry.initialized?
+
+    { status: status, user: event&.user, request: event&.request&.to_h }
+  end
+end
+
 def metrics_report
   metrics = SpilloverTelemetry.metrics
 
@@ -111,7 +130,7 @@ end
 
 File.write(ENV.fetch("DUMMY_REPORT"),
            JSON.generate(sentry: sentry_report, traces: traces_report, metrics: metrics_report,
-                         log: log_report, client_spans: client_spans))
+                         log: log_report, client_spans: client_spans, requests: requests_report))
 
 # The report is written, and what a probe boots is more than it needs to shut down: Sentry's own
 # `at_exit` flushes to a DSN that points at nothing here and raises when it cannot. A boot that

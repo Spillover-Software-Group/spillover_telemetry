@@ -49,6 +49,16 @@ class RailtieTest < ActiveSupport::TestCase
     assert_not boot(SENTRY_DSN: DSN).dig(:sentry, :structured_logging)
   end
 
+  # A form posted with everything a browser sends beside it: a query, a cookie and the headers.
+  test "says nothing of a failed request but its method and its URL" do
+    request = { path: "/fail?token=secret", method: "POST", input: "reply=Thanks",
+                env: { "CONTENT_TYPE" => "application/x-www-form-urlencoded", "HTTP_COOKIE" => "session=secret",
+                       "HTTP_USER_AGENT" => "Mozilla/5.0", "HTTP_REFERER" => "https://example.org/?token=secret" } }
+
+    assert_equal({ method: "POST", url: "http://example.org/fail", headers: {}, env: {}, cookies: {} },
+                 boot(SENTRY_DSN: DSN, requests: [ request ]).dig(:requests, 0, :request))
+  end
+
   test "lets the application add to the Sentry configuration" do
     assert_equal 7, boot(SENTRY_DSN: DSN, DUMMY_SENTRY_BREADCRUMBS: "7").dig(:sentry, :max_breadcrumbs)
   end

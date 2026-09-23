@@ -27,14 +27,6 @@ class ErrorsTest < ActiveSupport::TestCase
     assert_equal "5f2d1c9", Sentry.configuration.release
   end
 
-  # Events carry no cookies, no request bodies and no user address unless an application asks for
-  # them, which is the SDK's own default and is left alone here.
-  test "sends nothing personally identifying" do
-    install
-
-    assert_not Sentry.configuration.send_default_pii
-  end
-
   # `bin/rails runner` reports a non-zero exit as a SystemExit, which is the shell's answer to the
   # person who typed the command rather than an error anyone can act on in Sentry.
   test "does not send a process exiting" do

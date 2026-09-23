@@ -86,6 +86,10 @@ about the queue, the way its depth is, so both hosts report the same pair of num
 `httpx` is loaded, Sentry's own adapter for it is required, and an outbound call becomes a breadcrumb
 on whatever error follows it.
 
+An error says of the request it happened in only the method and the URL, without its query: no
+cookies, no headers, no body. `send_default_pii` off leaves out everything but the headers, and the
+gem leaves those out too, since the `Referer` among them can carry the query of another page.
+
 sentry-rails' structured logging is turned off. Its default forwards every Active Record and Action
 Controller log line to Sentry, and those logs already go to CloudWatch. An application that wants it
 turns it back on in its own `sentry` block.
