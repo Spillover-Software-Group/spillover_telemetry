@@ -74,6 +74,16 @@ production monitoring, not a refactor.
 - The service name is never set in code. `OTEL_SERVICE_NAME` is the SDK's own variable, and a
   container that forgets it reporting as `unknown_service` is better than one quietly counted as
   another application.
+- The GraphQL instrumentation is carried and gated the same way as the two HTTP clients': by its own
+  `present` block, never by a constant check here. It traces the query and nothing per field.
+- `trace_id` answers in X-Ray's form, `1-<8 hex>-<24 hex>`, because it is for a person to paste into
+  the console, and nil where nothing is traced, because a log tag leaves a nil out.
+- `annotate` indexes through the span's own `aws.xray.annotations` attribute, never through
+  `indexed_attributes` in a collector's configuration: the hosts' collectors are not this gem's to
+  configure, and a list on the span follows the span wherever it is exported. The list keeps the keys
+  an earlier call put there.
+- Both do nothing, and raise nothing, in a process without OpenTelemetry: telemetry never fails a
+  request.
 
 **The log**
 
@@ -95,7 +105,7 @@ production monitoring, not a refactor.
 | `lib/spillover_telemetry/metrics/*_collector.rb` | One runtime each: `available?` and `values(now)` |
 | `lib/spillover_telemetry/errors.rb` | `Sentry.init`, and the user an error names |
 | `lib/spillover_telemetry/client_address.rb` | The middleware that names the address a request came from |
-| `lib/spillover_telemetry/traces.rb` | The SDK configuration |
+| `lib/spillover_telemetry/traces.rb` | The SDK configuration, the trace id and the annotations |
 | `lib/spillover_telemetry/railtie.rb` | When each of the three runs, where the middleware sits, and the log's environment |
 
 The three signal files take their settings as arguments and know nothing of Rails, which is what

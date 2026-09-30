@@ -28,6 +28,18 @@ module SpilloverTelemetry
     def identify_user(id:, email:)
       Errors.identify(id: id, email: email)
     end
+
+    # The trace the current request is in, as X-Ray names it, for the request's log lines. Nil where
+    # nothing is traced, which a log tag leaves out.
+    def trace_id
+      Traces.trace_id
+    end
+
+    # What the current request is about, said where the application knows it, for finding its trace
+    # by in X-Ray: `annotate(graphql_operation: "CreateBusiness", account_id: 6063)`.
+    def annotate(**facts)
+      Traces.annotate(**facts)
+    end
   end
 end
 
