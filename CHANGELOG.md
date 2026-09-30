@@ -2,6 +2,19 @@
 
 Versions are semver tags. An application pins one.
 
+## v0.4.0
+
+- A GraphQL operation is traced by its name. The Rails bundle saw every request to a GraphQL
+  endpoint as one POST to one path; graphql-ruby's instrumentation is now carried and installs where
+  the process loaded it, as a span per query with the operation's name and type. Nothing per field.
+- A request's log lines can name the trace they are in: `SpilloverTelemetry.trace_id` answers it as
+  X-Ray writes it, and nil where nothing is traced, so a log tag leaves it out. A line and its trace
+  are found from each other rather than by matching timestamps.
+- A request's trace can be found by what the application says of it: `SpilloverTelemetry.annotate`
+  puts the facts on the request's span and lists them for X-Ray to index as annotations, through the
+  exporter's own `aws.xray.annotations` attribute, so the collector on the host is not configured
+  for it. A nil says nothing, and a process tracing nothing does nothing.
+
 ## v0.3.0
 
 - An error sends no value of its request's headers but the `User-Agent`. `send_default_pii` off

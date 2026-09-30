@@ -16,6 +16,10 @@ require "sentry/test_helper"
 # read before boot rather than a require inside a test.
 require ENV["DUMMY_HTTP_CLIENT"] if ENV["DUMMY_HTTP_CLIENT"]
 
+# The GraphQL library, where the application serves a GraphQL API: loaded from its Gemfile, so here
+# too it is a fact about the whole process rather than a require inside a test.
+require "graphql" if ENV["DUMMY_GRAPHQL"]
+
 # How a container logs, where the container logs to stdout. An application requires it from its own
 # application file, above the class it configures, because the railtie has to be loaded before the
 # application is configured; a probe does the same.
@@ -70,30 +74,44 @@ def traces_report
     untraced_endpoints: registry.lookup("OpenTelemetry::Instrumentation::Rack").config[:untraced_endpoints],
     active_record_installed: registry.lookup("OpenTelemetry::Instrumentation::ActiveRecord").installed?,
     faraday_installed: registry.lookup("OpenTelemetry::Instrumentation::Faraday").installed?,
-    httpx_installed: registry.lookup("OpenTelemetry::Instrumentation::HTTPX").installed?
+    httpx_installed: registry.lookup("OpenTelemetry::Instrumentation::HTTPX").installed?,
+    graphql_installed: registry.lookup("OpenTelemetry::Instrumentation::GraphQL").installed?
   }
 end
 
+# Every span this process finishes, read out of the SDK rather than off the wire: the exporter is in
+# memory and the probe's OTEL_TRACES_EXPORTER is none, so nothing goes out and there is nothing left
+# to flush. Nil where the process traces nothing.
+def span_exporter
+  return unless Object.const_defined?(:OpenTelemetry)
+
+  @span_exporter ||= OpenTelemetry::SDK::Trace::Export::InMemorySpanExporter.new.tap do |exporter|
+    OpenTelemetry.tracer_provider.add_span_processor(
+      OpenTelemetry::SDK::Trace::Export::SimpleSpanProcessor.new(exporter)
+    )
+  end
+end
+
+def finished_spans
+  Array(span_exporter&.finished_spans).map do |span|
+    { name: span.name, kind: span.kind.to_s, attributes: span.attributes, trace_id: span.hex_trace_id }
+  end
+end
+
 # One real request to the server DUMMY_HTTP_REQUEST names, made with the client this process loaded,
-# and the spans it left. The exporter is in memory and the probe's OTEL_TRACES_EXPORTER is none, so
-# nothing goes out on the wire and there is nothing left to flush.
+# and the spans it left.
 def client_spans
   url = ENV["DUMMY_HTTP_REQUEST"]
   return [] unless url
 
-  exporter = OpenTelemetry::SDK::Trace::Export::InMemorySpanExporter.new
-  OpenTelemetry.tracer_provider.add_span_processor(
-    OpenTelemetry::SDK::Trace::Export::SimpleSpanProcessor.new(exporter)
-  )
+  span_exporter.reset
 
   case ENV.fetch("DUMMY_HTTP_CLIENT")
   when "faraday" then ::Faraday.get(url)
   when "httpx" then ::HTTPX.get(url)
   end
 
-  exporter.finished_spans.map do |span|
-    { name: span.name, kind: span.kind.to_s, attributes: span.attributes }
-  end
+  finished_spans
 end
 
 def log_report
@@ -102,9 +120,9 @@ def log_report
   { defined: true, environment: SemanticLogger.environment }
 end
 
-# What the application answered each request DUMMY_REQUESTS names, and what the error it reported
-# said. Sentry keeps the configuration the boot gave it and swaps only its transport for the SDK's
-# own test double, so nothing leaves the process.
+# What the application answered each request DUMMY_REQUESTS names, the trace it said it was in, the
+# spans it left, and what the error it reported said. Sentry keeps the configuration the boot gave it
+# and swaps only its transport for the SDK's own test double, so nothing leaves the process.
 #
 # The requests are served in turn by one thread other than the one that booted the application, as
 # a Puma thread serves one request after another. Sentry keeps a hub for each thread and copies each
@@ -119,10 +137,14 @@ def requests_report
   Thread.new do
     requests.map do |request|
       env = Rack::MockRequest.env_for(request.fetch("path"), method: request["method"], input: request["input"])
-      status, = Rails.application.call(env.merge(request.fetch("env", {})))
+      span_exporter&.reset
+      status, headers, body = Rails.application.call(env.merge(request.fetch("env", {})))
+      # The request's span ends when the server closes the body, as Puma does once it has sent it.
+      body.close if body.respond_to?(:close)
       event = Sentry::TestHelper.sentry_events.pop if Sentry.initialized?
 
-      { status: status, user: event&.user, request: event&.request&.to_h }
+      { status: status, trace_id: headers["Trace-Id"], spans: finished_spans,
+        user: event&.user, request: event&.request&.to_h }
     end
   end.value
 end

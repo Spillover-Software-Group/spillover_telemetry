@@ -20,6 +20,8 @@ group :development, :test do
   # asserting that a patch was applied.
   gem "faraday"
   gem "httpx", ">= 1.6"
+  # The GraphQL library the applications serve their APIs with; the suite executes a real schema.
+  gem "graphql"
 
   gem "minitest"
   gem "puma"

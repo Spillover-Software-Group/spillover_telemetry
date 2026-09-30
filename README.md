@@ -10,14 +10,14 @@ writes no configuration at all.
 
 ```ruby
 # Gemfile
-gem "spillover_telemetry", github: "Spillover-Software-Group/spillover_telemetry", tag: "v0.3.0"
+gem "spillover_telemetry", github: "Spillover-Software-Group/spillover_telemetry", tag: "v0.4.0"
 ```
 
 Pinned to a tag, never floating. The repository is public, so the image build's `bundle install`
 clones it without a credential.
 
-The gem carries `sentry-rails` and five OpenTelemetry gems, the SDK, the OTLP exporter and one
-instrumentation each for Rails, Faraday and httpx, so those lines come out of the Gemfile. Bundler
+The gem carries `sentry-rails` and six OpenTelemetry gems, the SDK, the OTLP exporter and one
+instrumentation each for Rails, Faraday, httpx and GraphQL, so those lines come out of the Gemfile. Bundler
 requires what a Gemfile names and never a gem's own dependencies, so OpenTelemetry is still loaded
 only where an endpoint is set.
 
@@ -35,10 +35,19 @@ env:
     - SENTRY_DSN
 ```
 
-And where the application authenticates a request, name the user it is for:
+And where the application authenticates a request, name the user it is for, and say what the
+request is about, so its trace can be found by it:
 
 ```ruby
 SpilloverTelemetry.identify_user(id: account.to_gid_param, email: account.email)
+SpilloverTelemetry.annotate(account_id: account.id, graphql_operation: operation_name)
+```
+
+An application that logs through `rails_semantic_logger` names the trace on each request's lines:
+
+```ruby
+# config/environments/production.rb
+config.log_tags = { request_id: :request_id, trace_id: ->(_request) { SpilloverTelemetry.trace_id } }
 ```
 
 That is the whole of it.
@@ -121,6 +130,7 @@ The OpenTelemetry SDK, covering the request that comes in and the calls the appl
 | The Rails bundle | the request, through Rack, Action Pack, Action View, Active Job and Active Support | where the process is on Rails 7.1 or newer, `/health` excepted |
 | Faraday | one client span per outbound call | where the process loaded Faraday 1.0 or newer |
 | httpx | one client span per outbound call | where the process loaded httpx 1.6 or newer |
+| GraphQL | one span per operation, with its name and type | where the process loaded graphql-ruby 2.0.19 or newer |
 
 Active Record is left out of the bundle: it traces transactions and nothing else, and a job process
 polling its queue is a transaction a second. The health check is the load balancer asking every
@@ -135,6 +145,26 @@ forgets it reports as `unknown_service`.
 Each instrumentation in the Rails bundle patches Rails 7.1 and up and asks the process which it is
 on, the same way. An application older than that reports its metrics and its errors as any other
 does, is told in a line of its own what went uninstalled, and traces nothing of the request.
+
+The GraphQL instrumentation is what tells the operations inside a GraphQL endpoint apart: to the
+Rails bundle every one of them is a POST to the same path. It traces the query and nothing per
+field, since a span for every field of every query is more than a trace can be read through. An
+application that wants field spans turns `enable_platform_field` on through the extension point
+below.
+
+#### Finding a trace
+
+`SpilloverTelemetry.trace_id` is the id of the trace the current request is in, written as X-Ray
+writes it (`1-`, eight hex digits, `-`, twenty-four more), or nil where nothing is traced. On a
+request's log lines, a line and its trace are found from each other.
+
+`SpilloverTelemetry.annotate(**facts)` says what the request is about, where the application knows
+it: the operation it ran, the account it ran as, whether it failed. Each fact becomes an attribute of
+the request's span, and X-Ray indexes it as an annotation, so `annotation.account_id = 6063` in the
+console's filter finds every trace of that account. The keys are listed for the exporter under
+`aws.xray.annotations`, which is how they are indexed with no collector configuration; a key wants
+letters, digits and underscores, and a value a string, a number or a boolean. A nil is left out.
+Call it as often as the request learns something: the list keeps every key.
 
 ### The log
 
